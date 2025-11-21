@@ -10,12 +10,15 @@
 #include <unistd.h>
 #include <chrono>
 #include <vector>
+#include <cstdint>
 
 const double CONSTRAINT_X = 3000;
 const double CONSTRAINT_Y = 3000;
 const double CONSTRAINT_Z = 1000;
 
 #include "Msg_structs.h"  // Include the structure definition for msg_plane_info
+
+#define SHARED_MEMORY_SIZE sizeof(SharedMemory)
 
 class ComputerSystem {
 public:
@@ -24,6 +27,8 @@ public:
 
     bool startMonitoring();
     void joinThread();
+    void start();
+    void applyOperatorCommand(const Message_inter_process& msg);
 
 private:
     void monitorAirspace();

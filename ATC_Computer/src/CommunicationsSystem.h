@@ -10,6 +10,7 @@ class CommunicationsSystem {
 public:
 	CommunicationsSystem();
 	~CommunicationsSystem();
+	void start();
 private:
     void HandleCommunications();
     void messageAircraft(const Message& msg);

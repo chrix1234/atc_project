@@ -48,9 +48,9 @@ void Aircraft::printInitialAircraftData() const {
 
 
 void Aircraft::changeHeading(double Vx, double Vy, double Vz){
-	if (Vx > 0) speedX = Vx;
-	if (Vx > 0) speedY = Vy;
-	if (Vx > 0) speedZ = Vz;
+	speedX = Vx;
+	speedY = Vy;
+	speedZ = Vz;
 }
 
 
@@ -101,9 +101,9 @@ int Aircraft::updatePosition() {
     //Note: It is important to not interfere channel names with other groups
     std::string id_str = "chris"+std::to_string(id);  // Convert integer id to string
     const char* ID = id_str.c_str();         // Convert string to const char*
-    name_attach_t* Plane_channel = name_attach(NULL, ID, 0); // For server
+    name_attach_t* plane_channel = name_attach(NULL, ID, 0); // For server
 
-    if (Plane_channel == NULL) {
+    if (plane_channel == NULL) {
             std::cerr << "Could not attach plane ID: " << ID << " to channel\n";
             return EXIT_FAILURE;
         }
@@ -116,7 +116,7 @@ int Aircraft::updatePosition() {
             posZ += speedZ;
 
             // Debug: Print the new position
-            //std::cout << "Updated Position: (" << posX << ", " << posY << ", " << posZ << ")\n";
+            std::cout << "Updated Position: (" << posX << ", " << posY << ", " << posZ << ")\n";
 
             // Check if the plane is still within airspace boundaries
             if (posX < airspace.lower_x_boundary || posX > airspace.upper_x_boundary ||
@@ -133,7 +133,7 @@ int Aircraft::updatePosition() {
 
             // Check for incoming position update requests from Radar
             char buffer[sizeof(Message_inter_process)];  // Buffer to handle largest message size
-            int rcvid = MsgReceive(Plane_channel->chid, buffer, sizeof(buffer), NULL);
+            int rcvid = MsgReceive(plane_channel->chid, buffer, sizeof(buffer), NULL);
 
             if (rcvid != -1) {
 
@@ -146,12 +146,41 @@ int Aircraft::updatePosition() {
                 	// Handle different message types using switch
                     // COEN320 Lab 4_5: You need to handle different message types here
                     // These commands come from Communication System
-                    /*
+
+
                     switch (receivedMsg->type) {
-                        case MessageType::REQUEST_CHANGE_OF_HEADING:
-                        case MessageType::REQUEST_CHANGE_POSITION:
-                        ....
-                    */
+                        case MessageType::REQUEST_CHANGE_OF_HEADING: {
+                            msg_change_heading ch;
+                            std::memcpy(&ch, receivedMsg->data.data(), sizeof(ch));
+                            speedX = ch.VelocityX;
+                            speedY = ch.VelocityY;
+                            speedZ = ch.VelocityZ;
+                            if (ch.altitude != 0) posZ = ch.altitude;
+                            std::cout << "Plane " << id << " heading updated by operator.\n";
+                            break;
+                        }
+                        case MessageType::REQUEST_CHANGE_POSITION: {
+                            msg_change_position cp;
+                            std::memcpy(&cp, receivedMsg->data.data(), sizeof(cp));
+                            posX = cp.x;
+                            posY = cp.y;
+                            posZ = cp.z;
+                            std::cout << "Plane " << id << " position updated by operator.\n";
+                            break;
+                        }
+                        case MessageType::REQUEST_CHANGE_ALTITUDE: {
+                            msg_change_heading ch;
+                            std::memcpy(&ch, receivedMsg->data.data(), sizeof(ch));
+                            posZ = ch.altitude;
+                            std::cout << "Plane " << id << " altitude updated by operator.\n";
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+
+                    // Reply to sender if needed
+                    MsgReply(rcvid, EOK, nullptr, 0);
                 } else {  //periodic
                 	// Message is of type Message
                 	Message* receivedMsg = reinterpret_cast<Message*>(buffer);
@@ -169,7 +198,7 @@ int Aircraft::updatePosition() {
             timer.waitTimer();
         }
 
-        name_detach(Plane_channel, 0);
+        name_detach(plane_channel, 0);
         pthread_exit(NULL);
 
         return 0;
