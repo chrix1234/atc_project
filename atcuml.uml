@@ -1,0 +1,32 @@
+@startuml
+skinparam rectangleStyle rounded
+skinparam shadowing false
+skinparam arrowColor #222
+skinparam defaultFontName Courier
+
+rectangle "Radar Process" as Radar {
+    component "Aircraft Threads" as A1
+}
+
+rectangle "Shared Memory\n(/dev/shmem/...)" as SHM
+
+rectangle "ATC_Computer Process" as ATC {
+    component "Communication Thread" as CommThread
+}
+
+rectangle "Display Process" as Display
+
+'rectangle "ComputerSystem Process" as CS
+
+' --- Data Flow Connections ---
+Radar --> SHM : Writes aircraft data\n(ID, positions, velocities)
+SHM --> ATC : Reads aircraft data
+
+' --- Channels ---
+ATC --> Display : DISPLAY_CHANNEL\n(Display Grid Updates)
+ATC --> Display : COLLISION_CHANNEL\n(Collision Alerts *)
+
+ATC --> Radar : COMMUNICATIONS_CHANNEL\n(Commands to Aircraft)
+'CS --> Radar : COMPUTER_SYSTEM_CHANNEL\n(System control messages)
+
+@enduml
